@@ -1,0 +1,1 @@
+﻿import os, django; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ecoconnect_core.settings'); django.setup(); from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@ecoconnect.com', 'Admin@1234', role='admin', is_verified=True, barangay='San Jose')
