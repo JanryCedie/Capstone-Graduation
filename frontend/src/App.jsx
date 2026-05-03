@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -17,8 +17,8 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Navigate to="/login-Residence" replace />} />
+        <Route path="/login-Residence" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -27,7 +27,7 @@ function App() {
         <Route path="/manage-participants/:eventId" element={<ManageParticipants />} />
 
         {/* Admin Routes */}
-        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/login-Barangay" element={<AdminLogin />} />
         <Route path="/admin/signup" element={<AdminSignup />} />
         <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
         <Route path="/admin" element={<AdminDashboard />} />

@@ -9,7 +9,7 @@ echo.
 
 :: 2. Setup Backend if needed
 echo [BACKEND] Checking environment...
-cd backend
+cd django_backend
 if not exist venv (
     echo [INFO] Virtual environment not found. Creating...
     python -m venv venv
@@ -39,6 +39,6 @@ echo  URL: http://localhost:8000
 echo ===================================================
 echo.
 
-cd backend
+cd django_backend
 call run.bat
 pause

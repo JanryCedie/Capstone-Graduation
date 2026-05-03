@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, MapPin, Calendar, Award, Leaf, Shield, Eye, X, Gift, Info, Menu, Users, ShoppingBag, ArrowRightLeft, Settings, Phone, Mail, Lock } from 'lucide-react';
+import { LogOut, User, MapPin, Calendar, Award, Leaf, Shield, Eye, X, Gift, Info, Menu, Users, ShoppingBag, ArrowRightLeft, Settings, Phone, Mail, Lock, History, Maximize2, Minimize2, Sparkles, Bot } from 'lucide-react';
 import { URBAN_BARANGAYS } from '../data/barangays';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-
+import ChatWidget from '../components/ChatWidget';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -30,6 +30,7 @@ export default function Dashboard() {
     const [officials, setOfficials] = useState([]);
     const [showOfficialsModal, setShowOfficialsModal] = useState(false);
     const [showRedeemModal, setShowRedeemModal] = useState(false);
+    const [isMapMaximized, setIsMapMaximized] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [activeTab, setActiveTab] = useState('Overview'); 
     const [transferRequests, setTransferRequests] = useState([]);
@@ -37,8 +38,11 @@ export default function Dashboard() {
     const [transferTarget, setTransferTarget] = useState('');
     const [transferReason, setTransferReason] = useState('');
     const [showProfileModal, setShowProfileModal] = useState(false);
-    const [profileFormData, setProfileFormData] = useState({ username: '', email: '', phone_number: '', password: '' });
+    const [ecoTip, setEcoTip] = useState(null);
+    const [smartReminders, setSmartReminders] = useState([]);
+    const [profileFormData, setProfileFormData] = useState({ username: '', email: '', phone_number: '', password: '', profile_picture_file: null });
     const [updatingProfile, setUpdatingProfile] = useState(false);
+    const [redemptionHistory, setRedemptionHistory] = useState([]);
 
     const REDEEM_CATALOG = [
         { id: 1, name: '1 Kilo of Rice', points: 50, icon: '🌾' },
@@ -65,8 +69,8 @@ export default function Dashboard() {
                 username: 'Dev_Resident',
                 role: 'resident',
                 barangay: 'Santa Monica',
-                points: 150,
-                total_earned: 150,
+                points: 0,
+                total_earned: 0,
                 is_verified: true,
                 email: 'resident@example.com',
                 phone_number: '09123456789'
@@ -109,11 +113,20 @@ export default function Dashboard() {
                 }
             }
 
+            const aiRes = await fetch('/api/ai/tips/', { headers: getHeaders(token) });
+            if (aiRes.ok) setEcoTip(await aiRes.json());
+
             const officialsRes = await fetch('/api/auth/barangay/officials', { headers: getHeaders(token) });
             if (officialsRes.ok) setOfficials(await officialsRes.json());
 
+            const redRes = await fetch('/api/finance/redemption/history', { headers: getHeaders(token) });
+            if (redRes.ok) setRedemptionHistory(await redRes.json());
+
             const transferRes = await fetch('/api/auth/transfer/my-requests', { headers: getHeaders(token) });
             if (transferRes.ok) setTransferRequests(await transferRes.json());
+
+            const remindRes = await fetch('/api/ai/reminders/', { headers: getHeaders(token) });
+            if (remindRes.ok) setSmartReminders(await remindRes.json());
         } catch (error) {
             console.error('Error fetching data:', error);
         } finally {
@@ -197,19 +210,31 @@ export default function Dashboard() {
         setUpdatingProfile(true);
         try {
             const token = localStorage.getItem('token');
+            const data = new FormData();
+            data.append('username', profileFormData.username);
+            data.append('email', profileFormData.email);
+            data.append('phone_number', profileFormData.phone_number);
+            if (profileFormData.password) data.append('password', profileFormData.password);
+            if (profileFormData.profile_picture_file) {
+                data.append('profile_picture', profileFormData.profile_picture_file);
+            }
+
             const res = await fetch('/api/auth/profile/update', {
-                method: 'PUT',
-                headers: getHeaders(token),
-                body: JSON.stringify(profileFormData)
+                method: 'POST',
+                headers: { 
+                    'Authorization': token !== 'DEV_BYPASS_TOKEN' ? `Bearer ${token}` : '',
+                    'X-Dev-Bypass': token === 'DEV_BYPASS_TOKEN' ? 'DEV_BYPASS_TOKEN' : ''
+                },
+                body: data
             });
-            const data = await res.json();
+            const result = await res.json();
             if (res.ok) {
                 alert('Profile updated!');
-                setUser(data.user);
-                localStorage.setItem('user', JSON.stringify(data.user));
+                setUser(result.user);
+                localStorage.setItem('user', JSON.stringify(result.user));
                 setShowProfileModal(false);
-                setProfileFormData({ ...profileFormData, password: '' });
-            } else alert(data.message);
+                setProfileFormData({ ...profileFormData, password: '', profile_picture_file: null });
+            } else alert(result.message);
         } catch (error) {
             console.error('Error:', error);
         } finally {
@@ -220,17 +245,18 @@ export default function Dashboard() {
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        navigate('/login');
+        navigate('/login-Residence');
     };
 
     const handleUnauthorized = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        navigate('/login');
+        navigate('/login-Residence');
     };
 
     if (!user) return null;
     const isJoined = (eventId) => myEvents.some(p => p.event_id === eventId);
+    const isAnyModalOpen = showOfficialsModal || showRedeemModal || showProfileModal || selectedEvent || isMapMaximized;
 
     return (
         <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
@@ -265,9 +291,13 @@ export default function Dashboard() {
                             <Menu className="w-5 h-5" />
                         </button>
                         <div>
-                            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Dashboard</h2>
+                            <h2 className="text-sm font-bold text-green-600 uppercase tracking-widest">Citizen Portal</h2>
                             <p className="text-xl font-extrabold text-slate-800 tracking-tight">Welcome, {user.username}!</p>
                         </div>
+                    </div>
+                    <div className="flex items-center gap-3 bg-green-50 px-5 py-2.5 rounded-2xl border border-green-100">
+                        <MapPin className="w-4 h-4 text-green-600" />
+                        <span className="text-sm font-black text-green-700 uppercase tracking-tighter">{user.barangay}</span>
                     </div>
                 </header>
 
@@ -280,6 +310,55 @@ export default function Dashboard() {
                                         <StatCard icon={<Award className="w-6 h-6" />} label="Eco Points" value={user.points} color="text-green-600" bg="bg-green-50" />
                                         <StatCard icon={<Calendar className="w-6 h-6" />} label="Drives" value={myEvents.length} color="text-blue-600" bg="bg-blue-50" />
                                     </div>
+
+                                    {smartReminders.length > 0 && (
+                                        <div className="space-y-4">
+                                            <h3 className="text-sm font-black text-slate-500 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
+                                                <Sparkles className="w-4 h-4 text-amber-500" /> Smart Mission Briefing
+                                            </h3>
+                                            <div className="grid grid-cols-1 gap-4">
+                                                {smartReminders.map((remind, idx) => (
+                                                    <div key={idx} className="bg-white border-2 border-blue-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+                                                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:rotate-12 transition-transform">
+                                                            <Plus className="w-20 h-20 text-blue-600" />
+                                                        </div>
+                                                        <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+                                                            <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 shrink-0">
+                                                                <Calendar className="w-6 h-6 text-blue-600" />
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <h4 className="text-lg font-bold text-slate-800 leading-tight mb-1">{remind.event_title}</h4>
+                                                                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{remind.date} • {remind.time}</p>
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-2 md:max-w-[300px]">
+                                                                {remind.suggested_tools.map((tool, tIdx) => (
+                                                                    <span key={tIdx} className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-tight flex items-center gap-1.5 border border-slate-200">
+                                                                        {tool}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {ecoTip && (
+                                        <div className="bg-gradient-to-r from-green-500 to-emerald-400 p-6 rounded-3xl text-white shadow-xl shadow-green-500/20 flex gap-4 items-start relative overflow-hidden group">
+                                            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                                                <Sparkles className="w-32 h-32" />
+                                            </div>
+                                            <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-sm shrink-0 border border-white/20"><Bot className="w-8 h-8 text-white" /></div>
+                                            <div className="relative z-10">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full border border-white/20">Eco-Intelligence</span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-green-100">{ecoTip.level}</span>
+                                                </div>
+                                                <p className="text-lg font-bold leading-relaxed shadow-sm">{ecoTip.tip}</p>
+                                            </div>
+                                        </div>
+                                    )}
                                     {!user.is_verified && (
                                         <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 flex items-center gap-6 shadow-sm">
                                             <div className="bg-amber-100 p-4 rounded-2xl text-amber-600 animate-pulse"><Shield className="w-8 h-8" /></div>
@@ -308,13 +387,20 @@ export default function Dashboard() {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="bg-white rounded-4xl p-4 shadow-xl shadow-slate-100 border border-slate-100 aspect-square overflow-hidden">
+                                    <div className={`bg-white rounded-4xl p-4 shadow-xl shadow-slate-100 border border-slate-100 aspect-square overflow-hidden transition-all duration-500 relative group/map ${isAnyModalOpen && !isMapMaximized ? 'blur-md grayscale opacity-40 scale-95' : ''}`}>
                                         <MapContainer center={[9.7407, 118.7353]} zoom={13} style={{ height: '100%', width: '100%', borderRadius: '1.5rem' }} zoomControl={false}>
                                             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                             {events.map(event => (
                                                 <Marker key={event.id} position={[9.7407 + (Math.random() * 0.05), 118.7353 + (Math.random() * 0.05)]} />
                                             ))}
                                         </MapContainer>
+                                        <button 
+                                            onClick={() => setIsMapMaximized(true)}
+                                            className="absolute top-6 right-6 z-[999] p-4 bg-slate-900 text-white rounded-2xl shadow-2xl border border-white/20 backdrop-blur-md transition-all active:scale-95 hover:bg-slate-800"
+                                            title="Enlarge Map"
+                                        >
+                                            <Maximize2 className="w-6 h-6 text-green-400" />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -368,9 +454,33 @@ export default function Dashboard() {
             </div>
 
             {selectedEvent && <EventDetailModal event={selectedEvent} onClose={() => setSelectedEvent(null)} onJoin={() => { handleJoin(selectedEvent.id); setSelectedEvent(null); }} isJoined={isJoined(selectedEvent.id)} user={user} />}
-            {showRedeemModal && <RedeemModal catalog={REDEEM_CATALOG} points={user.points} onClose={() => setShowRedeemModal(false)} onRedeem={handleRedeem} loading={redeeming} />}
+            {showRedeemModal && <RedeemModal catalog={REDEEM_CATALOG} points={user.points} totalPoints={user.total_earned} onClose={() => setShowRedeemModal(false)} onRedeem={handleRedeem} loading={redeeming} history={redemptionHistory} />}
             {showOfficialsModal && <OfficialsModal officials={officials} onClose={() => setShowOfficialsModal(false)} />}
-            {showProfileModal && <ProfileModal formData={profileFormData} setFormData={setProfileFormData} onClose={() => setShowProfileModal(false)} onSubmit={handleUpdateProfile} loading={updatingProfile} />}
+            {showProfileModal && <ProfileModal formData={profileFormData} setFormData={setProfileFormData} onClose={() => setShowProfileModal(false)} onSubmit={handleUpdateProfile} loading={updatingProfile} user={user} />}
+            
+            <ChatWidget />
+
+            {isMapMaximized && (
+                <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-xl z-[2000] p-4 md:p-12 flex flex-col animate-in fade-in duration-300">
+                    <div className="flex justify-between items-center mb-6 text-white">
+                        <div>
+                            <h2 className="text-3xl font-black tracking-tighter">Strategic Deployment Map</h2>
+                            <p className="text-slate-400 font-medium">Real-time event locations across the jurisdiction</p>
+                        </div>
+                        <button onClick={() => setIsMapMaximized(false)} className="p-4 bg-white/10 hover:bg-white/20 rounded-3xl transition-all active:scale-95 border border-white/10 shadow-2xl">
+                            <Minimize2 className="w-8 h-8" />
+                        </button>
+                    </div>
+                    <div className="flex-1 bg-white rounded-[48px] overflow-hidden shadow-2xl border-4 border-white/10">
+                        <MapContainer center={[9.7407, 118.7353]} zoom={14} style={{ height: '100%', width: '100%' }}>
+                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                            {events.map(event => (
+                                <Marker key={event.id} position={[9.7407 + (Math.random() * 0.05), 118.7353 + (Math.random() * 0.05)]} />
+                            ))}
+                        </MapContainer>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -421,7 +531,7 @@ function EventItem({ event, isJoined, onView, onJoin, user }) {
 
 function EventDetailModal({ event, onClose, onJoin, isJoined, user }) {
     return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[1001]">
             <div className="bg-white rounded-5xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
                 <div className="relative h-48 bg-gradient-to-br from-green-600 to-emerald-400 p-8 flex items-end">
                     <button onClick={onClose} className="absolute top-6 right-6 p-2 bg-white/20 hover:bg-white/30 rounded-xl text-white backdrop-blur-md transition-colors"><X className="w-6 h-6" /></button>
@@ -456,32 +566,68 @@ function EventDetailModal({ event, onClose, onJoin, isJoined, user }) {
     );
 }
 
-function RedeemModal({ catalog, points, onClose, onRedeem, loading }) {
+function RedeemModal({ catalog, points, totalPoints, onClose, onRedeem, loading, history=[] }) {
     return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-5xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
-                <div className="p-8 pb-6 flex justify-between items-center border-b border-slate-50">
-                    <div>
-                        <h2 className="text-3xl font-black text-slate-800 tracking-tighter">Shop Rewards</h2>
-                        <p className="text-sm font-medium text-slate-400">Redeem your points for essential goods</p>
-                    </div>
-                    <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Your Balance</span>
-                        <div className="flex items-center gap-2 bg-green-50 px-4 py-2 rounded-2xl border border-green-100 text-green-600 font-black text-xl">{points} <Award className="w-5 h-5" /></div>
-                    </div>
-                </div>
-                <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-2 gap-6 custom-scrollbar">
-                    {catalog.map(item => (
-                        <div key={item.id} className="bg-slate-50 rounded-4xl p-6 border border-slate-100 hover:border-green-300 hover:bg-white transition-all group flex items-center justify-between">
-                            <div className="flex items-center gap-5">
-                                <div className="text-4xl group-hover:scale-125 transition-transform">{item.icon}</div>
-                                <div><h4 className="text-lg font-black text-slate-800">{item.name}</h4><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.points} Points Req.</p></div>
-                            </div>
-                            <button onClick={() => onRedeem(item)} disabled={loading || points < item.points} className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-green-600 disabled:opacity-50 transition-all shadow-lg active:scale-95">Redeem</button>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[1001]">
+            <div className="bg-white rounded-5xl w-full max-w-5xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[85vh]">
+                {/* Catalog Section */}
+                <div className="flex-1 flex flex-col border-r border-slate-50">
+                    <div className="p-8 pb-6 flex justify-between items-center border-b border-slate-50">
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-800 tracking-tighter">Shop Rewards</h2>
+                            <p className="text-sm font-medium text-slate-400">Redeem points for essential goods</p>
                         </div>
-                    ))}
+                        <div className="flex items-center gap-3">
+                            <div className="flex flex-col items-end">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Your Balance</span>
+                                <div className="flex items-center gap-2 bg-green-50 px-4 py-2 rounded-2xl border border-green-100 text-green-600 font-black text-xl">{points} <Award className="w-5 h-5" /></div>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Earned</span>
+                                <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-2xl border border-blue-100 text-blue-600 font-black text-xl">{totalPoints || 0} <Leaf className="w-5 h-5" /></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 gap-4 custom-scrollbar">
+                        {catalog.map(item => (
+                            <div key={item.id} className="bg-slate-50 rounded-4xl p-6 border border-slate-100 hover:border-green-300 hover:bg-white transition-all group flex items-center justify-between">
+                                <div className="flex items-center gap-5">
+                                    <div className="text-4xl group-hover:scale-125 transition-transform">{item.icon}</div>
+                                    <div><h4 className="text-lg font-black text-slate-800">{item.name}</h4><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.points} Points Req.</p></div>
+                                </div>
+                                <button onClick={() => onRedeem(item)} disabled={loading || points < item.points} className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-green-600 disabled:opacity-50 transition-all shadow-lg active:scale-95">Redeem</button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-                <div className="p-8 border-t border-slate-50 text-center"><button onClick={onClose} className="text-slate-400 hover:text-slate-600 font-bold text-sm">Close Shop</button></div>
+
+                {/* History Section */}
+                <div className="w-full md:w-96 bg-slate-50/50 flex flex-col">
+                    <div className="p-8 pb-6 border-b border-slate-100 flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-slate-800 tracking-tight">Recent Claims</h3>
+                        <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-xl transition-colors"><X className="w-5 h-5 text-slate-400" /></button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                        {history.length === 0 ? (
+                            <div className="text-center py-12">
+                                <History className="w-10 h-10 text-slate-200 mx-auto mb-4" />
+                                <p className="text-slate-400 text-sm font-medium">No redemptions yet.</p>
+                            </div>
+                        ) : (
+                            history.map(r => (
+                                <div key={r.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h4 className="font-bold text-slate-800 text-sm">{r.item_name}</h4>
+                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${r.status === 'Claimed' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+                                            {r.status}
+                                        </span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 font-bold">{new Date(r.timestamp).toLocaleDateString()} • -{r.points_spent} pts</p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -489,7 +635,7 @@ function RedeemModal({ catalog, points, onClose, onRedeem, loading }) {
 
 function OfficialsModal({ officials, onClose }) {
     return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[1001]">
             <div className="bg-white rounded-5xl w-full max-w-2xl overflow-hidden shadow-2xl max-h-[80vh] flex flex-col">
                 <div className="p-8 pb-6 flex justify-between items-center border-b border-slate-50">
                     <div><h2 className="text-3xl font-black text-slate-800 tracking-tighter">Barangay Council</h2></div>
@@ -508,21 +654,69 @@ function OfficialsModal({ officials, onClose }) {
     );
 }
 
-function ProfileModal({ formData, setFormData, onClose, onSubmit, loading }) {
+function ProfileModal({ formData, setFormData, onClose, onSubmit, loading, user }) {
     return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
-            <div className="bg-white rounded-5xl w-full max-w-lg overflow-hidden shadow-2xl">
-                <div className="p-8 pb-4 flex justify-between items-center border-b border-slate-50">
-                    <div><h2 className="text-2xl font-black text-slate-800 tracking-tighter">My Account</h2><p className="text-sm font-medium text-slate-400">Manage your personal information</p></div>
-                    <button onClick={onClose} className="p-3 bg-slate-50 hover:bg-slate-100 rounded-2xl text-slate-400 transition-colors"><X className="w-6 h-6" /></button>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[1001] animate-in fade-in duration-300">
+            <div className="bg-white rounded-5xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
+                <div className="w-full md:w-64 bg-slate-50 p-8 border-r border-slate-100 flex flex-col items-center">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Identity Verification</h3>
+                    <div className="space-y-6 w-full">
+                        <div className="flex flex-col items-center gap-2">
+                            <div className="w-32 h-32 rounded-3xl bg-white border-2 border-slate-200 overflow-hidden shadow-inner relative group">
+                                {user.profile_picture ? (
+                                    <img src={`/${user.profile_picture}`} className="w-full h-full object-cover" alt="Profile" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-200"><User className="w-16 h-16" /></div>
+                                )}
+                                <label className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                                    <span className="text-white text-[10px] font-bold uppercase tracking-tighter">Change Photo</span>
+                                    <input type="file" className="hidden" accept="image/*" onChange={e => setFormData({...formData, profile_picture_file: e.target.files[0]})} />
+                                </label>
+                            </div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Profile Photo</p>
+                        </div>
+                        
+                        <div className="flex flex-col items-center gap-2">
+                            <div className="w-full aspect-[1.58/1] rounded-2xl bg-white border-2 border-slate-200 overflow-hidden shadow-inner relative group">
+                                {user.id_image ? (
+                                    <img src={`/${user.id_image}`} className="w-full h-full object-cover" alt="Barangay ID" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-200"><Shield className="w-8 h-8" /></div>
+                                )}
+                                <a href={`/${user.id_image}`} target="_blank" rel="noreferrer" className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <Eye className="text-white w-5 h-5" />
+                                </a>
+                            </div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Barangay ID Card</p>
+                        </div>
+                    </div>
                 </div>
-                <form onSubmit={onSubmit} className="p-8 space-y-5">
-                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Username</label><div className="relative"><User className="w-5 h-5 text-slate-300 absolute left-4 top-4" /><input type="text" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} className="w-full bg-slate-50 pl-12 pr-6 py-4 rounded-2xl border border-slate-100 focus:border-green-500 focus:ring-4 focus:ring-green-50 outline-none transition-all font-bold text-slate-800" required /></div></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label><div className="relative"><Mail className="w-5 h-5 text-slate-300 absolute left-4 top-4" /><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full bg-slate-50 pl-12 pr-6 py-4 rounded-2xl border border-slate-100 focus:border-green-500 focus:ring-4 focus:ring-green-500 outline-none transition-all font-bold text-slate-800" required /></div></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone</label><div className="relative"><Phone className="w-5 h-5 text-slate-300 absolute left-4 top-4" /><input type="text" value={formData.phone_number} onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })} className="w-full bg-slate-50 pl-12 pr-6 py-4 rounded-2xl border border-slate-100 focus:border-green-500 focus:ring-4 focus:ring-green-500 outline-none transition-all font-bold text-slate-800" required /></div></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">New Password</label><div className="relative"><Lock className="w-5 h-5 text-slate-300 absolute left-4 top-4" /><input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="********" className="w-full bg-slate-50 pl-12 pr-6 py-4 rounded-2xl border border-slate-100 focus:border-green-500 focus:ring-4 focus:ring-green-500 outline-none transition-all font-bold text-slate-800" /></div></div>
-                    <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white font-extrabold py-5 rounded-3xl hover:bg-slate-800 transition-all text-lg shadow-xl shadow-slate-100 disabled:opacity-50 mt-4">{loading ? 'Saving Changes...' : 'Update Profile'}</button>
-                </form>
+
+                <div className="flex-1 p-8">
+                    <div className="flex justify-between items-center mb-8">
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-800 tracking-tighter">My Account</h2>
+                            <p className="text-sm font-medium text-slate-400">Manage your personal information</p>
+                        </div>
+                        <button onClick={onClose} className="p-3 bg-slate-50 hover:bg-slate-100 rounded-2xl text-slate-400 transition-colors"><X className="w-6 h-6" /></button>
+                    </div>
+                    
+                    <form onSubmit={onSubmit} className="space-y-5">
+                        <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Username</label><div className="relative"><User className="w-5 h-5 text-slate-300 absolute left-4 top-4" /><input type="text" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} className="w-full bg-slate-50 pl-12 pr-6 py-4 rounded-2xl border border-slate-100 focus:border-green-500 focus:ring-4 focus:ring-green-50 outline-none transition-all font-bold text-slate-800" required /></div></div>
+                        <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label><div className="relative"><Mail className="w-5 h-5 text-slate-300 absolute left-4 top-4" /><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full bg-slate-50 pl-12 pr-6 py-4 rounded-2xl border border-slate-100 focus:border-green-500 focus:ring-4 focus:ring-green-500 outline-none transition-all font-bold text-slate-800" required /></div></div>
+                        <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone</label><div className="relative"><Phone className="w-5 h-5 text-slate-300 absolute left-4 top-4" /><input type="text" value={formData.phone_number} onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })} className="w-full bg-slate-50 pl-12 pr-6 py-4 rounded-2xl border border-slate-100 focus:border-green-500 focus:ring-4 focus:ring-green-500 outline-none transition-all font-bold text-slate-800" required /></div></div>
+                        <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">New Password</label><div className="relative"><Lock className="w-5 h-5 text-slate-300 absolute left-4 top-4" /><input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="********" className="w-full bg-slate-50 pl-12 pr-6 py-4 rounded-2xl border border-slate-100 focus:border-green-500 focus:ring-4 focus:ring-green-500 outline-none transition-all font-bold text-slate-800" /></div></div>
+                        
+                        {formData.profile_picture_file && (
+                            <div className="bg-green-50 p-4 rounded-2xl border border-green-100 flex items-center gap-3 animate-in slide-in-from-top-2">
+                                <div className="p-2 bg-green-100 rounded-lg text-green-600"><Eye className="w-4 h-4" /></div>
+                                <p className="text-xs font-bold text-green-700">New Photo Ready: {formData.profile_picture_file.name}</p>
+                            </div>
+                        )}
+
+                        <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white font-extrabold py-5 rounded-3xl hover:bg-slate-800 transition-all text-lg shadow-xl shadow-slate-100 disabled:opacity-50 mt-4">{loading ? 'Saving Changes...' : 'Update Profile'}</button>
+                    </form>
+                </div>
             </div>
         </div>
     );

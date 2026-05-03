@@ -36,7 +36,7 @@ export default function AdminSignup() {
             const result = await response.json();
             if (response.ok) {
                 alert('Admin Account Created! Please login to the terminal.');
-                navigate('/admin/login');
+                navigate('/login-Barangay');
             } else {
                 alert(result.message || 'Registration failed');
             }
@@ -52,7 +52,7 @@ export default function AdminSignup() {
         <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
             <div className="max-w-md w-full">
                 <button
-                    onClick={() => navigate('/admin/login')}
+                    onClick={() => navigate('/login-Barangay')}
                     className="flex items-center gap-2 text-slate-400 hover:text-white mb-8 transition-colors group"
                 >
                     <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -169,7 +169,7 @@ export default function AdminSignup() {
                     <div className="p-6 bg-slate-900/50 border-t border-slate-700 text-center">
                         <p className="text-slate-400 text-sm">
                             Already have access?{' '}
-                            <Link to="/admin/login" className="text-red-500 hover:text-red-400 font-medium">
+                            <Link to="/login-Barangay" className="text-red-500 hover:text-red-400 font-medium">
                                 Sign In
                             </Link>
                         </p>

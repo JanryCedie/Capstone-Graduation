@@ -6,56 +6,56 @@ import { URBAN_BARANGAYS, RURAL_BARANGAYS } from '../data/barangays';
 export default function Login() {
     const [formData, setFormData] = useState({ username: '', password: '', barangay: URBAN_BARANGAYS[0] });
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setError('');
 
-        // Resident Login Access Control
-        const devResident = {
-            id: 100,
-            username: 'Dev_Resident',
-            role: 'resident',
-            barangay: formData.barangay || 'Santa Monica',
-            points: 150,
-            total_earned: 150,
-            is_verified: true
-        };
-        localStorage.setItem('user', JSON.stringify(devResident));
-        localStorage.setItem('token', 'DEV_BYPASS_TOKEN');
-        
-        navigate('/dashboard');
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData),
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                localStorage.setItem('token', result.access_token);
+                localStorage.setItem('user', JSON.stringify(result.user));
+                navigate('/dashboard');
+            } else {
+                alert(result.message || 'Login failed');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            alert('Cannot connect to the server. Please ensure the backend is running.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-            <div className="bg-white p-8 rounded-3xl shadow-xl max-w-sm w-full">
+            <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
                 <div className="flex justify-center mb-6">
                     <div className="bg-green-100 p-3 rounded-full">
                         <Leaf className="w-8 h-8 text-green-600" />
                     </div>
                 </div>
                 <h2 className="text-2xl font-bold text-center text-slate-800 mb-1">Welcome Back</h2>
-                <p className="text-center text-slate-500 text-sm mb-6">Log in to your Eco Warrior portal</p>
+                <p className="text-center text-slate-500 text-sm mb-8">Log in to your Eco Warrior portal</p>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {error && (
-                        <div className="bg-red-50 text-red-600 text-xs p-3 rounded-xl border border-red-100 text-center">
-                            {error}
-                        </div>
-                    )}
-
+                <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Username</label>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Username</label>
                         <div className="relative">
-                            <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                            <User className="w-5 h-5 text-slate-400 absolute left-4 top-3.5" />
                             <input
+                                required
                                 type="text"
-                                className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                                placeholder="Enter username (auto bypass)"
+                                className="w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm transition-all"
+                                placeholder="Enter username"
                                 value={formData.username}
                                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                             />
@@ -63,37 +63,20 @@ export default function Login() {
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Your Barangay</label>
-                        <select
-                            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                            value={formData.barangay}
-                            onChange={(e) => setFormData({ ...formData, barangay: e.target.value })}
-                        >
-                            <optgroup label="Urban Barangays">
-                                {URBAN_BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
-                            </optgroup>
-                            <optgroup label="Rural Barangays">
-                                {RURAL_BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
-                            </optgroup>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Password</label>
+                        <div className="flex justify-between items-center mb-2 ml-1">
+                            <label className="block text-xs font-bold text-slate-400 uppercase">Password</label>
+                            <Link to="/forgot-password" className="text-xs font-bold text-green-600 hover:text-green-700">Forgot Password?</Link>
+                        </div>
                         <div className="relative">
-                            <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                            <Lock className="w-5 h-5 text-slate-400 absolute left-4 top-3.5" />
                             <input
+                                required
                                 type="password"
-                                className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                                placeholder="•••••••• (auto bypass)"
+                                className="w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm transition-all"
+                                placeholder="••••••••"
                                 value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             />
-                        </div>
-                        <div className="flex justify-end mt-1">
-                            <Link to="/forgot-password" className="text-xs font-medium text-green-600 hover:text-green-700">
-                                Forgot Password?
-                            </Link>
                         </div>
                     </div>
 

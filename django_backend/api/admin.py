@@ -7,7 +7,6 @@ class UserAdmin(DefaultUserAdmin):
     search_fields = ('username', 'email', 'phone_number')
     list_filter = ('role', 'is_verified', 'barangay')
     
-    # Add custom fields to entirely override fieldsets if we want, or just append to the base ones
     fieldsets = DefaultUserAdmin.fieldsets + (
         ('EcoConnect Info', {'fields': ('phone_number', 'role', 'points', 'barangay', 'id_image', 'is_verified')}),
     )

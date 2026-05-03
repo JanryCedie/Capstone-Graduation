@@ -17,7 +17,7 @@ export default function CreateEvent() {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         alert('Session expired. Please login again.');
-        navigate('/login');
+        navigate('/login-Residence');
     };
 
     const handleSubmit = async (e) => {

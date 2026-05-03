@@ -17,8 +17,8 @@ export default function ManageParticipants() {
         localStorage.removeItem('user');
         alert('Session expired. Please login again.');
         const user = JSON.parse(localStorage.getItem('user'));
-        if (user?.role === 'admin') navigate('/admin/login');
-        else navigate('/login');
+        if (user?.role === 'admin') navigate('/login-Barangay');
+        else navigate('/login-Residence');
     };
 
     const fetchParticipants = async () => {

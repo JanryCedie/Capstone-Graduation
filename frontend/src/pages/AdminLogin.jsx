@@ -16,30 +16,40 @@ export default function AdminLogin() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        
-        // System Authentication Logic
-        setTimeout(() => {
-            localStorage.setItem('token', 'dev-bypass-token');
-            localStorage.setItem('user', JSON.stringify({
-                username: 'Barangay Admin',
-                role: 'admin',
-                barangay: formData.barangay || 'Santa Monica'
-            }));
-            navigate('/admin');
+        setError('');
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData),
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                if (result.user.role !== 'admin') {
+                    setError('Access Denied: Not an admin account');
+                    setLoading(false);
+                    return;
+                }
+                localStorage.setItem('token', result.access_token);
+                localStorage.setItem('user', JSON.stringify(result.user));
+                navigate('/admin');
+            } else {
+                setError(result.message || 'Login failed');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            setError('Cannot connect to the server');
+        } finally {
             setLoading(false);
-        }, 500);
+        }
     };
 
     return (
         <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
             <div className="max-w-md w-full">
-                <button
-                    onClick={() => navigate('/')}
-                    className="flex items-center gap-2 text-slate-400 hover:text-white mb-8 transition-colors group"
-                >
-                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                    Back to Public Site
-                </button>
+
 
                 <div className="bg-slate-800 rounded-3xl shadow-2xl overflow-hidden border border-slate-700">
                     <div className="p-8 pb-0 text-center">
@@ -68,25 +78,6 @@ export default function AdminLogin() {
                                     value={formData.username}
                                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                 />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Assigned Barangay</label>
-                            <div className="relative">
-                                <MapPin className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" />
-                                <select
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:ring-2 focus:ring-red-500 outline-none transition-all appearance-none"
-                                    value={formData.barangay}
-                                    onChange={(e) => setFormData({ ...formData, barangay: e.target.value })}
-                                >
-                                    <optgroup label="Urban Barangays" className="bg-slate-900">
-                                        {URBAN_BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
-                                    </optgroup>
-                                    <optgroup label="Rural Barangays" className="bg-slate-900">
-                                        {RURAL_BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
-                                    </optgroup>
-                                </select>
                             </div>
                         </div>
 

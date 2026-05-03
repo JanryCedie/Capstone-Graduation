@@ -52,7 +52,7 @@ export default function ForgotPassword() {
             const data = await res.json();
             if (res.ok) {
                 alert('Password reset successfully! Please login with your new password.');
-                navigate('/login');
+                navigate('/login-Residence');
             } else {
                 setError(data.message);
             }
@@ -67,7 +67,7 @@ export default function ForgotPassword() {
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
             <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full border border-slate-100">
                 <button
-                    onClick={() => step === 1 ? navigate('/login') : setStep(step - 1)}
+                    onClick={() => step === 1 ? navigate('/login-Residence') : setStep(step - 1)}
                     className="flex items-center gap-2 text-slate-400 hover:text-green-600 mb-6 transition-colors group text-sm font-medium"
                 >
                     <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />

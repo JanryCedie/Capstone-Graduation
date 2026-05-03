@@ -5,7 +5,6 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix for default marker icon issues in React
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -51,7 +50,7 @@ export default function EditEvent() {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         alert('Session expired. Please login again.');
-        navigate('/admin/login');
+        navigate('/login-Barangay');
     };
 
     const fetchEvent = async () => {

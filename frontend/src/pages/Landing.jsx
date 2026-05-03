@@ -15,7 +15,7 @@ export default function Landing() {
                     EcoConnect
                 </h1>
                 <p className="text-slate-600 mb-8 max-w-sm mx-auto">
-                    Inspiring Puerto Princesa to Clean, Connect, and Earn Together. Choose your portal to begin.
+                    Inspiring Puerto Princesa to Clean, Connect, and Earn Together. Choose your gateway to the system.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-stretch w-full max-w-2xl">
@@ -25,9 +25,10 @@ export default function Landing() {
                             <Leaf className="w-6 h-6" />
                         </div>
                         <h3 className="font-bold text-slate-800 text-lg mb-1">Citizen Portal</h3>
-                        <p className="text-slate-500 text-sm mb-6 flex-grow">Join events and earn points for cleaning Puerto Princesa.</p>
+                        <p className="text-[10px] font-mono text-green-600 uppercase tracking-widest mb-4 font-black italic">For Residents</p>
+                        <p className="text-slate-500 text-sm mb-6 flex-grow">Join cleanup events and earn points for your community service.</p>
                         <Link
-                            to="/login"
+                            to="/login-Residence"
                             className="block w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all shadow-md active:scale-95 text-center"
                         >
                             Open Portal
@@ -40,9 +41,10 @@ export default function Landing() {
                             <Shield className="w-6 h-6" />
                         </div>
                         <h3 className="font-bold text-white text-lg mb-1">Command Center</h3>
-                        <p className="text-slate-400 text-sm mb-6 flex-grow">Manage events, monitor stats, and oversee operations.</p>
+                        <p className="text-[10px] font-mono text-red-500 uppercase tracking-widest mb-4 font-black italic">For Barangay Officials</p>
+                        <p className="text-slate-400 text-sm mb-6 flex-grow">Manage local events, monitor participation, and oversee jurisdiction stats.</p>
                         <Link
-                            to="/admin/login"
+                            to="/login-Barangay"
                             className="block w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-all shadow-md active:scale-95 text-center"
                         >
                             Access Console

@@ -12,23 +12,17 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-q-m^&wjo1v^#j24jfqpy^99=)yd+#4kd5huvp2u-lsn@524(&j'
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -59,7 +53,7 @@ ROOT_URLCONF = 'ecoconnect_core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR.parent / "frontend" / "dist"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -74,8 +68,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'ecoconnect_core.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
     'default': {
@@ -85,8 +77,6 @@ DATABASES = {
 }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -104,8 +94,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
 
@@ -116,24 +104,21 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+    BASE_DIR.parent / "frontend" / "dist",
+]
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Custom User Model
 AUTH_USER_MODEL = 'api.User'
 
-# CORS Config
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-# DRF & JWT Settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -147,7 +132,6 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# Email System Configuration
 import os
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
@@ -156,6 +140,5 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.environ.get('MAIL_USERNAME', 'YOUR_GMAIL@gmail.com')
 EMAIL_HOST_PASSWORD = os.environ.get('MAIL_PASSWORD', 'avsu zdkk mkhe xssz')
 
-# Semaphore SMS Logic Config
 SEMAPHORE_API_KEY = os.environ.get('SEMAPHORE_API_KEY', '018f61c722788dc7cdca0dcd1a976ece')
 SEMAPHORE_SENDER_NAME = os.environ.get('SEMAPHORE_SENDER_NAME', None)

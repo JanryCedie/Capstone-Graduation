@@ -34,7 +34,7 @@ export default function Signup() {
             const result = await response.json();
             if (response.ok) {
                 alert('Registration Successful! Please login.');
-                navigate('/login');
+                navigate('/login-Residence');
             } else {
                 alert(result.message || 'Registration failed');
             }
@@ -158,7 +158,7 @@ export default function Signup() {
 
                 <p className="mt-6 text-center text-sm text-slate-600">
                     Already have an account?{' '}
-                    <Link to="/login" className="text-green-600 hover:text-green-700 font-medium">
+                    <Link to="/login-Residence" className="text-green-600 hover:text-green-700 font-medium">
                         Sign in
                     </Link>
                 </p>

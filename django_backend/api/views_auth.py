@@ -13,9 +13,13 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.files.storage import FileSystemStorage
 from django.http import HttpResponse
-
+from django.db import models
+from django.shortcuts import get_object_or_404, render
 from .models import User, OTPStore
 from .serializers import UserSerializer
+
+def index(request, path=''):
+    return render(request, 'index.html')
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -71,9 +75,6 @@ def login(request):
     user = User.objects.filter(username=username).first()
 
     if user and user.check_password(password):
-        if user.barangay != barangay:
-            return Response({"message": f"User is registered in {user.barangay}, not {barangay}"}, status=status.HTTP_401_UNAUTHORIZED)
-            
         refresh = RefreshToken.for_user(user)
         return Response({
             "message": "Login successful",
@@ -117,7 +118,6 @@ def send_email_otp(target_email, otp):
         )
         return True, "Email Dispatched"
     except Exception as e:
-        print(f"❌ SMTP ERROR: {str(e)}")
         return False, str(e)
 
 @api_view(['POST'])
@@ -135,7 +135,6 @@ def forgot_password(request):
         
     otp = str(random.randint(100000, 999999))
     
-    # Deactivate old OTPs for this user
     OTPStore.objects.filter(phone_number=user.phone_number, is_used=False).update(is_used=True)
     OTPStore.objects.filter(email=user.email, is_used=False).update(is_used=True)
     
@@ -146,7 +145,6 @@ def forgot_password(request):
     if email_sent:
         return Response({"message": f"Verification code sent to {user.email}"}, status=status.HTTP_200_OK)
     else:
-        print(f"\n[FALLBACK] Email Failed ({status_msg}), but here is the code: {otp}\n")
         return Response({
             "message": f"Server connection pending settings. For testing, please check the backend terminal.",
             "error_detail": status_msg,
@@ -180,7 +178,6 @@ def reset_password(request):
         
     return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-from django.db import models
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -231,7 +228,6 @@ def export_residents(request):
 @permission_classes([IsAuthenticated])
 def verify_user(request, user_id):
     admin = request.user
-    from django.shortcuts import get_object_or_404
     target_user = get_object_or_404(User, id=user_id)
     
     if admin.role == 'admin' and target_user.barangay != admin.barangay:
@@ -245,3 +241,53 @@ def verify_user(request, user_id):
 @permission_classes([IsAuthenticated])
 def get_current_user(request):
     return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_barangay_officials(request):
+    barangay = request.query_params.get('barangay')
+    if not barangay:
+        if request.user.is_authenticated:
+            barangay = request.user.barangay
+        else:
+            return Response({"message": "Barangay required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+    officials = User.objects.filter(barangay=barangay, role__in=['official', 'admin'])
+    return Response(UserSerializer(officials, many=True).data, status=status.HTTP_200_OK)
+
+@api_view(['PUT', 'POST'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    user = request.user
+    data = request.data
+    
+    user.username = data.get('username', user.username)
+    user.email = data.get('email', user.email)
+    user.phone_number = data.get('phone_number', user.phone_number)
+    
+    if 'profile_picture' in request.FILES:
+        file = request.FILES['profile_picture']
+        fs = FileSystemStorage(location=os.path.join(settings.BASE_DIR, 'static/uploads'))
+        filename = fs.save(f"profile_{user.username}_{file.name}", file)
+        user.profile_picture = f"static/uploads/{filename}"
+
+    password = data.get('password')
+    if password:
+        user.set_password(password)
+        
+    user.save()
+    return Response({"message": "Profile updated", "user": UserSerializer(user).data}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def search_users(request):
+    query = request.query_params.get('query', '')
+    if len(query) < 2:
+        return Response([], status=status.HTTP_200_OK)
+        
+    users = User.objects.filter(
+        models.Q(username__icontains=query) | models.Q(phone_number__icontains=query),
+        role='resident'
+    ).exclude(barangay=request.user.barangay)
+    
+    return Response(UserSerializer(users, many=True).data, status=status.HTTP_200_OK)
