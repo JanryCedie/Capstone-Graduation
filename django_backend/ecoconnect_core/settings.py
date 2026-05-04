@@ -18,11 +18,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-q-m^&wjo1v^#j24jfqpy^99=)yd+#4kd5huvp2u-lsn@524(&j'
 
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['*']
-
-
+ALLOWED_HOSTS = ['ecoconnect.pythonanywhere.com', 'localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -67,16 +65,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ecoconnect_core.wsgi.application'
 
-
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
-
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -93,24 +87,19 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
-
-
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / "static",
     BASE_DIR.parent / "frontend" / "dist",
 ]
 
+CSRF_TRUSTED_ORIGINS = ['https://ecoconnect.pythonanywhere.com']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
